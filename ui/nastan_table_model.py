@@ -5,7 +5,7 @@ from models.nastan import Nastan
 
 
 class NastanTableModel(QAbstractTableModel):
-    COLUMNS = ["ID", "Име настан", "Датум", "Ишод"]
+    COLUMNS = ["ID", "Име настан", "Датум", "Исход"]
 
     def __init__(self, nastani: list[Nastan] | None = None):
         super().__init__()

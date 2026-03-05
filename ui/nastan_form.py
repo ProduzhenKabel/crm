@@ -27,7 +27,7 @@ class NastanFormDialog(QDialog):
         form.addRow("Име настан:", self.imeNastanEdit)
         form.addRow("Датум:", self.dataEdit)
         form.addRow("Опис:", self.opisEdit)
-        form.addRow("Ишод:", self.ishodEdit)
+        form.addRow("Исход:", self.ishodEdit)
 
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
