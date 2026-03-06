@@ -1,5 +1,6 @@
-# services/nastan_service.py
+# services/nastan_service.py - COMPLETE FILE
 from typing import List, Optional
+import uuid
 
 from sqlalchemy.orm import Session
 
@@ -27,9 +28,17 @@ class NastanService:
 
     def create_nastan(self, **data) -> Nastan:
         with self._get_session() as db:
+            # Generate unique nastan_id if not provided
+            if 'nastan_id' not in data or data['nastan_id'] is None:
+                data['nastan_id'] = int(uuid.uuid4().hex[:8], 16) % 1000000
+                while db.query(Nastan).filter(Nastan.nastan_id == data['nastan_id']).first():
+                    data['nastan_id'] = int(uuid.uuid4().hex[:8], 16) % 1000000
+            
             nastan = Nastan(**data)
             db.add(nastan)
-            db.flush()
+            db.commit()
+            db.refresh(nastan)
+            print(f"✅ Created nastan ID: {nastan.nastan_id}")
             return nastan
 
     def update_nastan(self, nastan_id: int, **data) -> Optional[Nastan]:

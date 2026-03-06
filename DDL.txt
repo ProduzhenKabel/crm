@@ -1,0 +1,22 @@
+CREATE DATABASE crm;
+USE crm;
+
+CREATE TABLE firmi (
+    firma_id INT NULL UNIQUE KEY FIRST,
+    ime VARCHAR(255),
+    contactMail VARCHAR(255),
+    contactNumber VARCHAR(50),
+    opis TEXT,
+    status VARCHAR(100),
+    notes TEXT
+);
+
+CREATE TABLE nastani (
+    nastan_id INT NULL UNIQUE KEY FIRST,
+    firma_id INT NULL,
+    ime_nastan TEXT,
+    data DATE,
+    opis TEXT,
+    ishod TEXT,
+    FOREIGN KEY (firma_id) REFERENCES firmi(firma_id)
+);
