@@ -40,6 +40,8 @@ class MainWindow(QMainWindow):
         # Left: Firmi
         left_layout = QVBoxLayout()
         lbl_firmi = QLabel("Фирми")
+        lbl_firmi.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
         self.tblFirmi = QTableView()
         self.firmaModel = FirmaTableModel([])
         self.tblFirmi.setModel(self.firmaModel)
@@ -67,6 +69,8 @@ class MainWindow(QMainWindow):
         # Right: Nastani
         right_layout = QVBoxLayout()
         lbl_nastani = QLabel("Настани (за избрана фирма)")
+        lbl_nastani.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
         self.tblNastani = QTableView()
         self.nastanModel = NastanTableModel([])
         self.tblNastani.setModel(self.nastanModel)
@@ -128,7 +132,16 @@ class MainWindow(QMainWindow):
             if not data["ime"]:
                 QMessageBox.warning(self, "Грешка", "Името е задолжително.")
                 return
-            self.firma_service.create_firma(**data)
+            
+            # Use get_or_create by ime ONLY
+            firma = self.firma_service.get_or_create_firma(
+                ime=data["ime"],
+                contactMail=data.get("contactMail"),
+                contactNumber=data.get("contactNumber"),
+                opis=data.get("opis"),
+                status=data.get("status"),
+                notes=data.get("notes")
+            )
             self.load_firmi()
 
     def on_edit_firma(self):
@@ -151,8 +164,7 @@ class MainWindow(QMainWindow):
         if not firma_id:
             QMessageBox.warning(self, "Инфо", "Избери фирма.")
             return
-        if QMessageBox.question(self, "Потврда", "Сигурни сте дека сакате да ја избришете фирмата?") \
-                != QMessageBox.StandardButton.Yes:
+        if QMessageBox.question(self, "Потврда", "Сигурни сте дека сакате да ја избришете фирмата?") != QMessageBox.StandardButton.Yes:
             return
         ok = self.firma_service.delete_firma(firma_id)
         if not ok:
@@ -194,8 +206,7 @@ class MainWindow(QMainWindow):
         if not nastan_id:
             QMessageBox.warning(self, "Инфо", "Избери настан.")
             return
-        if QMessageBox.question(self, "Потврда", "Сигурни сте дека сакате да го избришете настанот?") \
-                != QMessageBox.StandardButton.Yes:
+        if QMessageBox.question(self, "Потврда", "Сигурни сте дека сакате да го избришете настанот?") != QMessageBox.StandardButton.Yes:
             return
         ok = self.nastan_service.delete_nastan(nastan_id)
         if not ok:
