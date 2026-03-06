@@ -23,6 +23,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("CRM - Firmi и Настани")
+        self.resize(1400, 700)  # Подобра големина
 
         self.firma_service = FirmaService()
         self.nastan_service = NastanService()
@@ -41,10 +42,12 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout()
         lbl_firmi = QLabel("Фирми")
         lbl_firmi.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        lbl_firmi.setStyleSheet("font-weight: bold; font-size: 14px;")
 
         self.tblFirmi = QTableView()
         self.firmaModel = FirmaTableModel([])
         self.tblFirmi.setModel(self.firmaModel)
+        self.tblFirmi.horizontalHeader().setStretchLastSection(True)  # Авто растојание
         self.tblFirmi.selectionModel().selectionChanged.connect(self.on_firma_selected)
 
         btn_add_firma = QPushButton("Додади фирма")
@@ -70,10 +73,12 @@ class MainWindow(QMainWindow):
         right_layout = QVBoxLayout()
         lbl_nastani = QLabel("Настани (за избрана фирма)")
         lbl_nastani.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        lbl_nastani.setStyleSheet("font-weight: bold; font-size: 14px;")
 
         self.tblNastani = QTableView()
         self.nastanModel = NastanTableModel([])
         self.tblNastani.setModel(self.nastanModel)
+        self.tblNastani.horizontalHeader().setStretchLastSection(True)
 
         btn_add_nastan = QPushButton("Додади настан")
         btn_edit_nastan = QPushButton("Измени настан")
@@ -110,9 +115,13 @@ class MainWindow(QMainWindow):
         return self.nastanModel.nastan_id_at(index.row())
 
     def load_firmi(self):
-        firmi = self.firma_service.list_firmi()
-        self.firmaModel.set_firmi(firmi)
-        self.nastanModel.set_nastani([])
+        try:
+            firmi = self.firma_service.list_firmi()
+            self.firmaModel.set_firmi(firmi)
+            self.nastanModel.set_nastani([])
+            print(f"🔄 Loaded {len(firmi)} фирми")
+        except Exception as e:
+            QMessageBox.critical(self, "Грешка", f"Не можам да ги вчитам фирмите:\n{str(e)}")
 
     def on_firma_selected(self, selected, _deselected):
         self.load_nastani_for_selected_firma()
@@ -122,8 +131,12 @@ class MainWindow(QMainWindow):
         if not firma_id:
             self.nastanModel.set_nastani([])
             return
-        nastani = self.nastan_service.list_nastani(firma_id=firma_id)
-        self.nastanModel.set_nastani(nastani)
+        try:
+            nastani = self.nastan_service.list_nastani(firma_id=firma_id)
+            self.nastanModel.set_nastani(nastani)
+            print(f"🔄 Loaded {len(nastani)} настани за фирма {firma_id}")
+        except Exception as e:
+            QMessageBox.critical(self, "Грешка", f"Не можам да ги вчитам настаните:\n{str(e)}")
 
     def on_add_firma(self):
         dlg = FirmiFormDialog(self)
@@ -133,82 +146,111 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Грешка", "Името е задолжително.")
                 return
             
-            # Use get_or_create by ime ONLY
-            firma = self.firma_service.get_or_create_firma(
-                ime=data["ime"],
-                contactMail=data.get("contactMail"),
-                contactNumber=data.get("contactNumber"),
-                opis=data.get("opis"),
-                status=data.get("status"),
-                notes=data.get("notes")
-            )
-            self.load_firmi()
+            try:
+                firma = self.firma_service.get_or_create_firma(
+                    ime=data["ime"],
+                    contactMail=data.get("contactMail"),
+                    contactNumber=data.get("contactNumber"),
+                    opis=data.get("opis"),
+                    status=data.get("status"),
+                    notes=data.get("notes")
+                )
+                self.load_firmi()
+                QMessageBox.information(self, "Успех", f"Фирма '{data['ime']}' зачувана!")
+            except Exception as e:
+                QMessageBox.critical(self, "Грешка", f"Не можам да ја зачувам фирмата:\n{str(e)}")
 
     def on_edit_firma(self):
         firma_id = self._selected_firma_id()
         if not firma_id:
             QMessageBox.warning(self, "Инфо", "Избери фирма.")
             return
-        firma = self.firma_service.get_firma(firma_id)
-        if not firma:
-            QMessageBox.warning(self, "Грешка", "Фирмата не постои.")
-            return
-        dlg = FirmiFormDialog(self, firma=firma)
-        if dlg.exec():
-            data = dlg.get_data()
-            self.firma_service.update_firma(firma_id, **data)
-            self.load_firmi()
+        try:
+            firma = self.firma_service.get_firma(firma_id)
+            if not firma:
+                QMessageBox.warning(self, "Грешка", "Фирмата не постои.")
+                return
+            dlg = FirmiFormDialog(self, firma=firma)
+            if dlg.exec():
+                data = dlg.get_data()
+                self.firma_service.update_firma(firma_id, **data)
+                self.load_firmi()
+                QMessageBox.information(self, "Успех", "Фирмата е ажурирана!")
+        except Exception as e:
+            QMessageBox.critical(self, "Грешка", f"Грешка при уредување:\n{str(e)}")
 
     def on_delete_firma(self):
         firma_id = self._selected_firma_id()
         if not firma_id:
             QMessageBox.warning(self, "Инфо", "Избери фирма.")
             return
-        if QMessageBox.question(self, "Потврда", "Сигурни сте дека сакате да ја избришете фирмата?") != QMessageBox.StandardButton.Yes:
-            return
-        ok = self.firma_service.delete_firma(firma_id)
-        if not ok:
-            QMessageBox.warning(self, "Грешка", "Бришењето не успеа.")
-        self.load_firmi()
+        try:
+            firma = self.firma_service.get_firma(firma_id)
+            if QMessageBox.question(self, "Потврда", 
+                f"Сигурни сте дека сакате да ја избришете фирмата?\n'{firma.ime}'") != QMessageBox.StandardButton.Yes:
+                return
+            ok = self.firma_service.delete_firma(firma_id)
+            if not ok:
+                QMessageBox.warning(self, "Грешка", "Бришењето не успеа.")
+            else:
+                self.load_firmi()
+                QMessageBox.information(self, "Успех", "Фирмата е избришана!")
+        except Exception as e:
+            QMessageBox.critical(self, "Грешка", f"Грешка при бришење:\n{str(e)}")
 
     def on_add_nastan(self):
         firma_id = self._selected_firma_id()
         if not firma_id:
             QMessageBox.warning(self, "Инфо", "Прво избери фирма.")
             return
-        dlg = NastanFormDialog(self)
-        if dlg.exec():
-            data = dlg.get_data()
-            data["firma_id"] = firma_id
-            if not data["ime_nastan"]:
-                QMessageBox.warning(self, "Грешка", "Името на настанот е задолжително.")
-                return
-            self.nastan_service.create_nastan(**data)
-            self.load_nastani_for_selected_firma()
+        try:
+            dlg = NastanFormDialog(self)
+            if dlg.exec():
+                data = dlg.get_data()
+                data["firma_id"] = firma_id
+                if not data["ime_nastan"]:
+                    QMessageBox.warning(self, "Грешка", "Името на настанот е задолжително.")
+                    return
+                self.nastan_service.create_nastan(**data)
+                self.load_nastani_for_selected_firma()
+                QMessageBox.information(self, "Успех", "Настанот е зачуван!")
+        except Exception as e:
+            QMessageBox.critical(self, "Грешка", f"Не можам да го зачувам настанот:\n{str(e)}")
 
     def on_edit_nastan(self):
         nastan_id = self._selected_nastan_id()
         if not nastan_id:
             QMessageBox.warning(self, "Инфо", "Избери настан.")
             return
-        nastan = self.nastan_service.get_nastan(nastan_id)
-        if not nastan:
-            QMessageBox.warning(self, "Грешка", "Настанот не постои.")
-            return
-        dlg = NastanFormDialog(self, nastan=nastan)
-        if dlg.exec():
-            data = dlg.get_data()
-            self.nastan_service.update_nastan(nastan_id, **data)
-            self.load_nastani_for_selected_firma()
+        try:
+            nastan = self.nastan_service.get_nastan(nastan_id)
+            if not nastan:
+                QMessageBox.warning(self, "Грешка", "Настанот не постои.")
+                return
+            dlg = NastanFormDialog(self, nastan=nastan)
+            if dlg.exec():
+                data = dlg.get_data()
+                self.nastan_service.update_nastan(nastan_id, **data)
+                self.load_nastani_for_selected_firma()
+                QMessageBox.information(self, "Успех", "Настанот е ажуриран!")
+        except Exception as e:
+            QMessageBox.critical(self, "Грешка", f"Грешка при уредување:\n{str(e)}")
 
     def on_delete_nastan(self):
         nastan_id = self._selected_nastan_id()
         if not nastan_id:
             QMessageBox.warning(self, "Инфо", "Избери настан.")
             return
-        if QMessageBox.question(self, "Потврда", "Сигурни сте дека сакате да го избришете настанот?") != QMessageBox.StandardButton.Yes:
-            return
-        ok = self.nastan_service.delete_nastan(nastan_id)
-        if not ok:
-            QMessageBox.warning(self, "Грешка", "Бришењето не успеа.")
-        self.load_nastani_for_selected_firma()
+        try:
+            nastan = self.nastan_service.get_nastan(nastan_id)
+            if QMessageBox.question(self, "Потврда", 
+                f"Сигурни сте дека сакате да го избришете настанот?\n'{nastan.ime_nastan}'") != QMessageBox.StandardButton.Yes:
+                return
+            ok = self.nastan_service.delete_nastan(nastan_id)
+            if not ok:
+                QMessageBox.warning(self, "Грешка", "Бришењето не успеа.")
+            else:
+                self.load_nastani_for_selected_firma()
+                QMessageBox.information(self, "Успех", "Настанот е избришан!")
+        except Exception as e:
+            QMessageBox.critical(self, "Грешка", f"Грешка при бришење:\n{str(e)}")

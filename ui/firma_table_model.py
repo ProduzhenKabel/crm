@@ -5,7 +5,7 @@ from models.firma import Firma
 
 
 class FirmaTableModel(QAbstractTableModel):
-    COLUMNS = ["ID", "Име", "Мејл", "Телефон", "Статус"]
+    COLUMNS = ["ID", "Име", "Мејл", "Телефон", "Статус", "Белешки"]  # Додадена "Белешки"
 
     def __init__(self, firmi: list[Firma] | None = None):
         super().__init__()
@@ -20,7 +20,7 @@ class FirmaTableModel(QAbstractTableModel):
         return len(self._firmi)
 
     def columnCount(self, parent=None):
-        return len(self.COLUMNS)
+        return len(self.COLUMNS)  # Сега 6 колони
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid() or role != Qt.ItemDataRole.DisplayRole:
@@ -32,11 +32,13 @@ class FirmaTableModel(QAbstractTableModel):
         if col == 1:
             return firma.ime
         if col == 2:
-            return firma.contactMail
+            return firma.contactMail or ""
         if col == 3:
-            return firma.contactNumber
+            return firma.contactNumber or ""
         if col == 4:
-            return firma.status
+            return firma.status or ""
+        if col == 5:  # НОВА КОЛОНА - Белешки
+            return firma.notes or ""
         return None
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
